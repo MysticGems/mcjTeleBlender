@@ -41,7 +41,8 @@ dictionary = [
 	['ShaderNodeTexImage', 'TEX_IMAGE'],
 	['ShaderNodeMath', 'MATH'],
 	['ShaderNodeMixShader', 'MIX_SHADER'],
-	['ShaderNodeBsdfTransparent', 'BSDF_TRANSPARENT']
+	['ShaderNodeBsdfTransparent', 'BSDF_TRANSPARENT'],
+	['ShaderNodeFresnel', 'INPUT_FRESNEL']
 ]
 	
 def trad( str ):
@@ -107,8 +108,13 @@ def fixMat( mat, Glossfactor, GlossRough ):
 	
 	glossNode = nodes.new(trad( 'ShaderNodeBsdfGlossy'))
 	glossNode .location = ( ox - 600, oy - 100 )
+	
+	fresnelNode = nodes.new(trad( 'ShaderNodeFresnel'))
+	fresnelNode.location = ( ox - 600, oy + 200 )
+	fresnelNode.inputs[0].default_value = 1.333
 
-	glossNode.inputs[0].default_value = [specularColor[0]*Glossfactor,specularColor[1]*Glossfactor,specularColor[2]*Glossfactor,1]
+	#glossNode.inputs[0].default_value = [specularColor[0]*Glossfactor,specularColor[1]*Glossfactor,specularColor[2]*Glossfactor,1]
+	glossNode.inputs[0].default_value = [1,1,1,1]
 	glossNode.inputs[1].default_value = GlossRough 
 	addNode = nodes.new(trad( 'ShaderNodeMixShader'))
 	addNode .location = ( ox - 300, oy )
@@ -116,11 +122,12 @@ def fixMat( mat, Glossfactor, GlossRough ):
 	links.new( bsdfNode.outputs[0], addNode.inputs[1] )
 	links.new( glossNode.outputs[0], addNode.inputs[2] )
 	links.new( addNode.outputs[0], outNode.inputs[0] ) 
+	links.new( fresnelNode.outputs[0], addNode.inputs[0] )
 
 	KaMap = getMap( mat, 'Ka', 'Ka.' )
 	if KaMap:
 		emNode = nodes.new(trad( 'ShaderNodeEmission'))
-		emNode.location = ( ox - 600, oy + 300 )
+		emNode.location = ( ox - 750, oy + 300 )
 		emNode.inputs[1].default_value = 100
 		links.new( mixNode.outputs[0], emNode.inputs[0] )
 		links.new( emNode.outputs[0], addNode.inputs[0] )
