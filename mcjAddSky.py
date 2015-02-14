@@ -18,6 +18,14 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+bl_info = {
+    "name": "mcjTeleBlender",
+    "version": (1, 0),
+    "author": "mCasualJacques",
+    "blender": (2, 72, 0),
+    "description": "DAZ 3D to Blender conversion",
+    "category": "DAZ 3D"}
+
 import bpy
 
 dictionary = [

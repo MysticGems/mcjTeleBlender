@@ -17,6 +17,13 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 # ##### END GPL LICENSE BLOCK #####
+bl_info = {
+    "name": "mcjTeleBlender",
+    "version": (1, 0),
+    "author": "mCasualJacques",
+    "blender": (2, 72, 0),
+    "description": "DAZ 3D to Blender conversion",
+    "category": "DAZ 3D"}
 
 import bpy, math
 import struct
@@ -109,11 +116,6 @@ def fixMat( mat, Glossfactor, GlossRough ):
 	glossNode = nodes.new(trad( 'ShaderNodeBsdfGlossy'))
 	glossNode .location = ( ox - 600, oy - 100 )
 	
-	fresnelNode = nodes.new(trad( 'ShaderNodeFresnel'))
-	fresnelNode.location = ( ox - 600, oy + 200 )
-	fresnelNode.inputs[0].default_value = 1.333
-
-	#glossNode.inputs[0].default_value = [specularColor[0]*Glossfactor,specularColor[1]*Glossfactor,specularColor[2]*Glossfactor,1]
 	glossNode.inputs[0].default_value = [1,1,1,1]
 	glossNode.inputs[1].default_value = GlossRough 
 	addNode = nodes.new(trad( 'ShaderNodeMixShader'))
@@ -122,7 +124,6 @@ def fixMat( mat, Glossfactor, GlossRough ):
 	links.new( bsdfNode.outputs[0], addNode.inputs[1] )
 	links.new( glossNode.outputs[0], addNode.inputs[2] )
 	links.new( addNode.outputs[0], outNode.inputs[0] ) 
-	links.new( fresnelNode.outputs[0], addNode.inputs[0] )
 
 	KaMap = getMap( mat, 'Ka', 'Ka.' )
 	if KaMap:
