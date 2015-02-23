@@ -106,7 +106,7 @@ def switchToLibraryMaterials( matLib ):
             if( numat ):
                 mtrlslt.material = numat
             else:
-                mcjMakeCyclesNodes.fixMat( mtrlslt.material, Glossfactor, GlossRough )
+                mcjMakeCyclesNodes.fixMat( mtrlslt.material, Glossfactor, GlossRough, mtrlslt.name )
     for obj in bpy.data.objects:
         for mtrlslt in obj.material_slots:
             if( mtrlslt.material.oldname ):

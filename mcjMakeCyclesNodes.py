@@ -38,6 +38,50 @@ from bpy_extras.io_utils import axis_conversion
 # short even-if-incomplete render
 # bpy.context.scene.use_nodes = True
 
+#----- getShader ------
+
+# Selects a shader based on common DAZ surfaces
+# Defaults to a fabric shader
+
+surfaces = [
+	[ 'Cornea' , 'ShaderNodeBsdfGlass' ],
+	[ 'Ears' , 'Skin Shader' ],
+#	[ 'Eyelashes' , 'Skin Shader' ],
+	[ 'EyeReflection' , 'ShaderNodeBsdfTransparent' ],
+	[ 'Face' , 'Skin Shader' ],
+	[ 'Feet' , 'Skin Shader' ],
+#	[ 'Fingernails' , 'Skin Shader' ],
+	[ 'Forearms' , 'Skin Shader' ],
+	[ 'Gums' , 'Skin Shader' ],
+	[ 'Hands' , 'Skin Shader' ],
+	[ 'Head' , 'Skin Shader' ],
+	[ 'Hips' , 'Skin Shader' ],
+	[ 'InnerMouth' , 'Skin Shader' ],
+	[ 'Irises' , 'Eye Shader' ],
+	[ 'Lacrimals' , 'Skin Shader' ],
+	[ 'Legs' , 'Skin Shader' ],
+	[ 'Lips' , 'Skin Shader' ],
+	[ 'Neck' , 'Skin Shader' ],
+	[ 'Nipples' , 'Skin Shader' ],
+	[ 'Nostrils' , 'Skin Shader' ],
+	[ 'Pupils' , 'Eye Shader' ],
+	[ 'Sclera' , 'Eye Shader' ],
+	[ 'Shoulders' , 'Skin Shader' ],
+	[ 'Tear' , 'ShaderNodeBsdfGlass' ],
+	[ 'Teeth' , 'Skin Shader' ],
+#	[ 'Toenails' , 'Skin Shader' ],
+	[ 'Tongue' , 'Skin Shader' ],
+	[ 'Torso' , 'Skin Shader' ]
+]
+
+def getShader( str ):
+	for duet in surfaces:
+		if duet[0] in str:
+			return duet[1]
+	return 'Fabric Shader'
+	
+#-------- trad -----------
+
 dictionary = [
 	['ShaderNodeOutputMaterial', 'OUTPUT_MATERIAL'],
 	['ShaderNodeBsdfDiffuse', 'BSDF_DIFFUSE'],
@@ -49,10 +93,11 @@ dictionary = [
 	['ShaderNodeMath', 'MATH'],
 	['ShaderNodeMixShader', 'MIX_SHADER'],
 	['ShaderNodeGroup', ''],
+	['ShaderNodeBsdfGlass', ''],
 	['ShaderNodeBsdfTransparent', 'BSDF_TRANSPARENT'],
 	['ShaderNodeFresnel', 'INPUT_FRESNEL']
 ]
-	
+
 def trad( str ):
 	ver = bpy.app.version;
 	if( ( ver[0] == 2 ) and ( ver [1] > 66 ) ):
@@ -75,7 +120,7 @@ def getMap( mat, key, keydot ):
 	return 0
 
 #---------- fixMat ----------
-def fixMat( mat, Glossfactor, GlossRough ):
+def fixMat( mat, Glossfactor, GlossRough, mtlname ):
 	diffuseColor = mat.diffuse_color
 	specularColor = mat.specular_color
 	opacityStrength = mat.alpha
@@ -117,15 +162,25 @@ def fixMat( mat, Glossfactor, GlossRough ):
 # 	glossNode = nodes.new(trad( 'ShaderNodeBsdfGlossy'))
 # 	glossNode .location = ( ox - 600, oy - 100 )
 
-	# Create a Skin Shader group node; this must already be in the blend file
-	groupNode = nodes.new( trad('ShaderNodeGroup') )
-	groupNode.node_tree = bpy.data.node_groups['Skin Shader']
-	groupNode .location = ( ox - 900, oy + 100 )
-	nodes.remove( bsdfNode )
-	bsdfNode = groupNode
+	shader = getShader( mtlname )
+
+	if "ShaderNode" in shader:
+		newNode = nodes.new(trad(shader))
+		newNode .location = ( ox - 900, oy + 100 )
+		nodes.remove( bsdfNode )
+		bsdfNode = newNode
+		if 'ShaderNodeBsdfGlass' == shader:
+			newNode.inputs[2].default_value = 1.376
+	else:
+		# Create a shader group node; this must already be in the blend file
+		groupNode = nodes.new( trad('ShaderNodeGroup') )
+		groupNode.node_tree = bpy.data.node_groups[getShader( mtlname )]
+		groupNode .location = ( ox - 900, oy + 100 )
+		nodes.remove( bsdfNode )
+		bsdfNode = groupNode
 	
 	# Link it to output
-	links.new( groupNode.outputs[0], outNode.inputs[0] )
+	links.new( bsdfNode.outputs[0], outNode.inputs[0] )
 	
 # 	glossNode.inputs[0].default_value = [1,1,1,1]
 # 	glossNode.inputs[1].default_value = GlossRough 
@@ -173,7 +228,7 @@ def fixMat( mat, Glossfactor, GlossRough ):
 		texNode = nodes.new(trad( 'ShaderNodeTexImage'))
 		texNode.location = ( ox - 1200, oy + 100 )
 		texNode.image = KdMap.image
-		links.new( texNode.outputs[0], groupNode.inputs[0] )
+		links.new( texNode.outputs[0], bsdfNode.inputs[0] )
 			
 	# Use the transparency (dissolve) map
 	DMap = getMap( mat, 'D', 'D.' )
@@ -215,7 +270,7 @@ def fixObject( o, Glossfactor, GlossRough ):
 	for m in materials:
 		mat = m.material
 		if mat:
-			fixMat( mat, Glossfactor, GlossRough )
+			fixMat( mat, Glossfactor, GlossRough, mat.name )
 		
 #---------- fixObjects ----------
 def fixObjects():
