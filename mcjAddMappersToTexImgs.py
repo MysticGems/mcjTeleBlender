@@ -57,7 +57,7 @@ def addMappingToMat( mat ):
 			shaderLang = 1;
 			if not socketOccupied( links, node.inputs[0] ):
 				mappingNode = nodes.new(trad( 'ShaderNodeMapping'))
-				mappingNode.location = ( node.location.x - 270, node.location.y )
+				mappingNode.location = ( node.location.x - 540, node.location.y )
 				links.new( mappingNode.outputs['Vector'], node.inputs['Vector'] )
 				texCoordNode = nodes.new(trad( 'ShaderNodeTexCoord'))
 				texCoordNode.location = ( mappingNode.location.x - 270, mappingNode.location.y )
