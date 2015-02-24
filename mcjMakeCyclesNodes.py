@@ -41,9 +41,10 @@ from bpy_extras.io_utils import axis_conversion
 #----- getShader ------
 
 # Selects a shader based on common DAZ surfaces
-# Defaults to a fabric shader
+# Defaults to a plain diffuse
 
 surfaces = [
+	[ 'defaultMat' , 'Skin Shader' ],
 	[ 'Cornea' , 'ShaderNodeBsdfGlass' ],
 	[ 'Ears' , 'Skin Shader' ],
 #	[ 'Eyelashes' , 'Skin Shader' ],
@@ -71,14 +72,16 @@ surfaces = [
 	[ 'Teeth' , 'Skin Shader' ],
 #	[ 'Toenails' , 'Skin Shader' ],
 	[ 'Tongue' , 'Skin Shader' ],
-	[ 'Torso' , 'Skin Shader' ]
+	[ 'Torso' , 'Skin Shader' ],
+	[ 'Base' , 'Hair Shader' ],
+	[ 'Hair' , 'Hair Shader' ]
 ]
 
 def getShader( str ):
 	for duet in surfaces:
 		if duet[0] in str:
 			return duet[1]
-	return 'Fabric Shader'
+	return 'ShaderNodeBsdfDiffuse'
 	
 #-------- trad -----------
 
@@ -150,14 +153,15 @@ def fixMat( mat, Glossfactor, GlossRough, mtlname ):
 	ox = outNode .location.x
 	oy = outNode .location.y
 	links = tree.links
-# 	bsdfNode.location = ( ox - 600, oy + 100 )
+	bsdfNode.location = ( ox - 600, oy )
 
-# 	mixNode = nodes.new(trad( 'ShaderNodeMixRGB'))
-# 	mixNode.location = ( ox - 900, oy + 100 )
-# 	mixNode.inputs[1].default_value = [ 1, 1, 1, 1 ]
-# 	mixNode.inputs[2].default_value = [ diffuseColor[0], diffuseColor[1], diffuseColor[2], 1 ]
-# 	mixNode.blend_type = 'MULTIPLY'
-# 	mixNode.inputs[0].default_value = 1.0
+	# RGB mix node (for tint)
+	mixNode = nodes.new(trad( 'ShaderNodeMixRGB'))
+	mixNode.location = ( ox - 900, oy )
+	mixNode.inputs[1].default_value = [ 1, 1, 1, 1 ]
+	mixNode.inputs[2].default_value = [ diffuseColor[0], diffuseColor[1], diffuseColor[2], 1 ]
+	mixNode.blend_type = 'MULTIPLY'
+	mixNode.inputs[0].default_value = 1.0
 # 	
 # 	glossNode = nodes.new(trad( 'ShaderNodeBsdfGlossy'))
 # 	glossNode .location = ( ox - 600, oy - 100 )
@@ -166,7 +170,6 @@ def fixMat( mat, Glossfactor, GlossRough, mtlname ):
 
 	if "ShaderNode" in shader:
 		newNode = nodes.new(trad(shader))
-		newNode .location = ( ox - 900, oy + 100 )
 		nodes.remove( bsdfNode )
 		bsdfNode = newNode
 		if 'ShaderNodeBsdfGlass' == shader:
@@ -175,10 +178,10 @@ def fixMat( mat, Glossfactor, GlossRough, mtlname ):
 		# Create a shader group node; this must already be in the blend file
 		groupNode = nodes.new( trad('ShaderNodeGroup') )
 		groupNode.node_tree = bpy.data.node_groups[getShader( mtlname )]
-		groupNode .location = ( ox - 900, oy + 100 )
 		nodes.remove( bsdfNode )
 		bsdfNode = groupNode
 	
+	bsdfNode .location = ( ox - 400, oy )
 	# Link it to output
 	links.new( bsdfNode.outputs[0], outNode.inputs[0] )
 	
@@ -186,7 +189,7 @@ def fixMat( mat, Glossfactor, GlossRough, mtlname ):
 # 	glossNode.inputs[1].default_value = GlossRough 
 # 	addNode = nodes.new(trad( 'ShaderNodeMixShader'))
 # 	addNode .location = ( ox - 300, oy )
-# 	links.new( mixNode.outputs[0], bsdfNode.inputs[0] )
+	links.new( mixNode.outputs[0], bsdfNode.inputs[0] )
 # 	links.new( bsdfNode.outputs[0], addNode.inputs[1] )
 # 	links.new( glossNode.outputs[0], addNode.inputs[2] )
 # 	links.new( addNode.outputs[0], outNode.inputs[0] ) 
@@ -222,34 +225,35 @@ def fixMat( mat, Glossfactor, GlossRough, mtlname ):
 # 		links.new( texNode.outputs[0], mulNode.inputs[0] )
 # 		links.new( mulNode.outputs[0], groupNode.inputs[0] )
 
-	# Add the diffuse map to the group node color input
-	KdMap = getMap( mat, 'Kd', 'Kd.' )
-	if KdMap:
-		texNode = nodes.new(trad( 'ShaderNodeTexImage'))
-		texNode.location = ( ox - 1200, oy + 100 )
-		texNode.image = KdMap.image
-		links.new( texNode.outputs[0], bsdfNode.inputs[0] )
+	if 'ShaderNodeBsdfGlass' != shader:
+		# Add the diffuse map to the group node color input
+		KdMap = getMap( mat, 'Kd', 'Kd.' )
+		if KdMap:
+			texNode = nodes.new(trad( 'ShaderNodeTexImage'))
+			texNode.location = ( ox - 1200, oy )
+			texNode.image = KdMap.image
+			links.new( texNode.outputs[0], mixNode.inputs[1] )
 			
-	# Use the transparency (dissolve) map
-	DMap = getMap( mat, 'D', 'D.' )
-	if( ( opacityStrength < 1 ) or ( DMap ) ):
-		mixNode = nodes.new(trad( 'ShaderNodeMixShader'))
-		mixNode .location = ( ox - 150, oy + 150 )
-		if( DMap ):
-			texNodeD = nodes.new(trad( 'ShaderNodeTexImage'))
-			texNodeD.location = ( ox - 400, oy + 400)
-			texNodeD.image = DMap.image
-			links.new( texNodeD.outputs[0], mixNode.inputs[0] )
-		elif( opacityStrength < 1 ):
-			mixNode.inputs[0].default_value = opacityStrength
-		xpaNode = nodes.new(trad( 'ShaderNodeBsdfTransparent'))
-		xpaNode .location = ( ox - 400, oy + 200)
-		outNode .location.x = outNode .location.x + 100
-#		addNode .location.x = addNode .location.x - 100
-		outNode .location.x = outNode .location.x + 100
-#		links.new( xpaNode.outputs[0], mixNode.inputs[1] )
-#		links.new( addNode.outputs[0], mixNode.inputs[2] )
-#		links.new( mixNode.outputs[0], outNode.inputs[0] )
+		if 'ShaderNodeBsdfTransparent' != shader:
+			# Use the transparency (dissolve) map
+			DMap = getMap( mat, 'D', 'D.' )
+			if( ( opacityStrength < 1 ) or ( DMap ) ):
+				mixNode = nodes.new(trad( 'ShaderNodeMixShader'))
+				mixNode .location = ( ox - 150, oy + 150 )
+				if( DMap ):
+					texNodeD = nodes.new(trad( 'ShaderNodeTexImage'))
+					texNodeD.location = ( ox - 400, oy + 320)
+					texNodeD.image = DMap.image
+					links.new( texNodeD.outputs[0], mixNode.inputs[0] )
+				elif( opacityStrength < 1 ):
+					mixNode.inputs[0].default_value = opacityStrength
+				xpaNode = nodes.new(trad( 'ShaderNodeBsdfTransparent'))
+				xpaNode .location = ( ox - 400, oy + 100 )
+				outNode .location.x = outNode .location.x + 200
+		#		addNode .location.x = addNode .location.x - 100
+				links.new( xpaNode.outputs[0], mixNode.inputs[1] )
+				links.new( bsdfNode.outputs[0], mixNode.inputs[2] )
+				links.new( mixNode.outputs[0], outNode.inputs[0] )
 
 	# Use bump map
 	BumpMap = getMap( mat, 'Bump', 'Bump.' )
