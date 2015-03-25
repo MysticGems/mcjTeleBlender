@@ -44,8 +44,9 @@ from bpy_extras.io_utils import axis_conversion
 # Defaults to a plain diffuse
 
 surfaces = [
+	[ 'Genitalia' , 'Skin Shader' ],
 	[ 'defaultMat' , 'Skin Shader' ],
-	[ 'Cornea' , 'ShaderNodeBsdfGlass' ],
+	[ 'Cornea' , 'ShaderNodeBsdfTransparent' ],
 	[ 'Ears' , 'Skin Shader' ],
 #	[ 'Eyelashes' , 'Skin Shader' ],
 	[ 'EyeReflection' , 'ShaderNodeBsdfTransparent' ],
@@ -53,15 +54,15 @@ surfaces = [
 	[ 'Feet' , 'Skin Shader' ],
 #	[ 'Fingernails' , 'Skin Shader' ],
 	[ 'Forearms' , 'Skin Shader' ],
-	[ 'Gums' , 'Skin Shader' ],
+	[ 'Gums' , 'Wet Skin Shader' ],
 	[ 'Hands' , 'Skin Shader' ],
 	[ 'Head' , 'Skin Shader' ],
 	[ 'Hips' , 'Skin Shader' ],
-	[ 'InnerMouth' , 'Skin Shader' ],
+	[ 'InnerMouth' , 'Wet Skin Shader' ],
 	[ 'Irises' , 'Eye Shader' ],
 	[ 'Lacrimals' , 'Skin Shader' ],
 	[ 'Legs' , 'Skin Shader' ],
-	[ 'Lips' , 'Skin Shader' ],
+	[ 'Lips' , 'Wet Skin Shader' ],
 	[ 'Neck' , 'Skin Shader' ],
 	[ 'Nipples' , 'Skin Shader' ],
 	[ 'Nostrils' , 'Skin Shader' ],
@@ -71,9 +72,13 @@ surfaces = [
 	[ 'Tear' , 'ShaderNodeBsdfGlass' ],
 	[ 'Teeth' , 'Skin Shader' ],
 #	[ 'Toenails' , 'Skin Shader' ],
-	[ 'Tongue' , 'Skin Shader' ],
+	[ 'Tongue' , 'Wet Skin Shader' ],
 	[ 'Torso' , 'Skin Shader' ],
 	[ 'Base' , 'Hair Shader' ],
+	[ 'Layer' , 'Hair Shader' ],
+	[ 'Scalp' , 'Hair Shader' ],
+	[ 'Strands' , 'Hair Shader' ],
+	[ 'Skullcap' , 'Hair Shader' ],
 	[ 'Hair' , 'Hair Shader' ]
 ]
 
@@ -155,6 +160,8 @@ def fixMat( mat, Glossfactor, GlossRough, mtlname ):
 	links = tree.links
 	bsdfNode.location = ( ox - 600, oy )
 
+	shader = getShader( mtlname )
+
 	# RGB mix node (for tint)
 	mixNode = nodes.new(trad( 'ShaderNodeMixRGB'))
 	mixNode.location = ( ox - 900, oy )
@@ -165,8 +172,6 @@ def fixMat( mat, Glossfactor, GlossRough, mtlname ):
 # 	
 # 	glossNode = nodes.new(trad( 'ShaderNodeBsdfGlossy'))
 # 	glossNode .location = ( ox - 600, oy - 100 )
-
-	shader = getShader( mtlname )
 
 	if "ShaderNode" in shader:
 		newNode = nodes.new(trad(shader))
@@ -255,6 +260,9 @@ def fixMat( mat, Glossfactor, GlossRough, mtlname ):
 				links.new( bsdfNode.outputs[0], mixNode.inputs[2] )
 				links.new( mixNode.outputs[0], outNode.inputs[0] )
 
+	if shader in [ 'ShaderNodeBsdfGlass', 'ShaderNodeBsdfTransparent' ]:
+		nodes.remove( mixNode )
+	
 	# Use bump map
 	BumpMap = getMap( mat, 'Bump', 'Bump.' )
 	if BumpMap:
