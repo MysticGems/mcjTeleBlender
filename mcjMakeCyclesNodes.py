@@ -79,6 +79,7 @@ surfaces = [
 	[ 'Scalp' , 'Hair Shader' ],
 	[ 'Strands' , 'Hair Shader' ],
 	[ 'Skullcap' , 'Hair Shader' ],
+	[ 'hair' , 'Hair Shader' ],
 	[ 'Hair' , 'Hair Shader' ]
 ]
 
