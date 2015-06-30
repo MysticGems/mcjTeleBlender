@@ -104,7 +104,9 @@ dictionary = [
 	['ShaderNodeGroup', ''],
 	['ShaderNodeBsdfGlass', ''],
 	['ShaderNodeBsdfTransparent', 'BSDF_TRANSPARENT'],
-	['ShaderNodeFresnel', 'INPUT_FRESNEL']
+	['ShaderNodeFresnel', 'INPUT_FRESNEL'],
+	['ShaderNodeRGBToBW', '' ],
+	['ShaderNodeBump', '' ]
 ]
 
 def trad( str ):
@@ -267,15 +269,25 @@ def fixMat( mat, Glossfactor, GlossRough, mtlname ):
 	# Use bump map
 	BumpMap = getMap( mat, 'Bump', 'Bump.' )
 	if BumpMap:
+		print ('- Bump map for ' + mat.name)
 		texNode = nodes.new(trad( 'ShaderNodeTexImage'))
-		texNode.location = ( ox - 600, oy - 300 ) 
+		texNode.location = ( ox - 1500, oy - 300 ) 
 		texNode.image = BumpMap.image
-		mulNode = nodes.new(trad( 'ShaderNodeMath'))
-		mulNode.location = ( ox - 300, oy - 200 )
-		mulNode.operation = "MULTIPLY"
-		mulNode.inputs[0].default_value = 0.003
-		links.new( texNode.outputs[0], mulNode.inputs[1] )
-		links.new( mulNode.outputs[0], outNode.inputs[2] )
+		bwNode = nodes.new(trad( 'ShaderNodeRGBToBW'))
+		bwNode.location = ( ox - 1200, oy - 600 )
+		bumpNode = nodes.new(trad( 'ShaderNodeBump'))
+		bumpNode.location = ( ox - 900, oy - 300 )
+		bumpNode.inputs[0].default_value = 0.01
+		bumpNode.inputs[1].default_value = 1.0
+# 		mulNode = nodes.new(trad( 'ShaderNodeMath'))
+# 		mulNode.location = ( ox - 1200, oy - 200 )
+# 		mulNode.operation = "MULTIPLY"
+# 		mulNode.inputs[0].default_value = 0.003
+# 		links.new( texNode.outputs[0], mulNode.inputs[1] )
+# 		links.new( mulNode.outputs[0], outNode.inputs[2] )
+		links.new( texNode.outputs[0], bwNode.inputs[0] )
+		links.new( bwNode.outputs[0], bumpNode.inputs[2] )
+		links.new( bumpNode.outputs[0], bsdfNode.inputs[2] )
 
 #---------- fixObject ----------
 def fixObject( o, Glossfactor, GlossRough ):
@@ -284,7 +296,7 @@ def fixObject( o, Glossfactor, GlossRough ):
 		mat = m.material
 		if mat:
 			fixMat( mat, Glossfactor, GlossRough, mat.name )
-            mat.specular_hardness = 50
+            # mat.specular_hardness = 50
 		
 #---------- fixObjects ----------
 def fixObjects():

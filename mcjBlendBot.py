@@ -112,6 +112,10 @@ def setBumpMapStrength( nodeName, matName, strength ):
 								multnode = in2links0.from_node
 								if multnode:
 									multnode.inputs[0].default_value = strength;
+					else: 
+						if ( outputNode.type in [ 'ShaderNodeBump', 'BUMP' ] ):
+							outputNode.inputs[1].default_value = strength;
+							print( "set bump strength for " + matName )
 		else:
 			print( "unable to find material named " + matName )
 	else:
