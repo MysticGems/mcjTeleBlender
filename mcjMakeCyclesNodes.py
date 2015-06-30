@@ -134,6 +134,7 @@ def getMap( mat, key, keydot ):
 def fixMat( mat, Glossfactor, GlossRough, mtlname ):
 	diffuseColor = mat.diffuse_color
 	specularColor = mat.specular_color
+	mat.specular_hardness = 50
 	opacityStrength = mat.alpha
 	tree = mat.node_tree
 	if not tree:
