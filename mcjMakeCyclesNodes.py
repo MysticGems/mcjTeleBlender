@@ -284,7 +284,7 @@ def fixObject( o, Glossfactor, GlossRough ):
 		mat = m.material
 		if mat:
 			fixMat( mat, Glossfactor, GlossRough, mat.name )
-            mat.specular_hardness = 50
+			mat.specular_hardness = 50
 		
 #---------- fixObjects ----------
 def fixObjects():
