@@ -20,8 +20,8 @@
 bl_info = {
     "name": "mcjTeleBlender",
     "version": (1, 0),
-    "author": "mCasualJacques",
-    "blender": (2, 72, 0),
+    "author": "mCasualJacques & Jack of Spades",
+    "blender": (2, 76, 0),
     "description": "DAZ 3D to Blender conversion",
     "category": "DAZ 3D"}
 
@@ -160,6 +160,17 @@ def fixMat( mat, Glossfactor, GlossRough, mtlname ):
 	oy = outNode .location.y
 	links = tree.links
 	bsdfNode.location = ( ox - 600, oy )
+	
+	# Add glossy shader
+# 	glossNode = nodes.new(trad( 'ShaderNodeBsdfGlossy' ) )
+# 	glossNode.location = ( ox - 600, oy - 300 )
+# 	mixShaderNode = nodes.new(trad( 'ShaderNodeMixShader' ) )
+# 	mixShaderNode.location = ( ox - 300, oy )
+# 	fresnelNode = nodes.new(trad( 'ShaderNodeFresnel' ) )
+# 	links.new( fresnelNode.outputs[0], mixShaderNode.inputs[0] )
+# 	links.new( bsdfNode.outputs[0], mixShaderNode.inputs[1] )
+# 	links.new( glossNode.outpus[0], mixShaderNode.inputs[2] )
+# 	links.new( mixShaderNode.outputs[0], outNode.inputs[0] )
 
 	shader = getShader( mtlname )
 
@@ -171,8 +182,6 @@ def fixMat( mat, Glossfactor, GlossRough, mtlname ):
 	mixNode.blend_type = 'MULTIPLY'
 	mixNode.inputs[0].default_value = 1.0
 # 	
-# 	glossNode = nodes.new(trad( 'ShaderNodeBsdfGlossy'))
-# 	glossNode .location = ( ox - 600, oy - 100 )
 
 	if "ShaderNode" in shader:
 		newNode = nodes.new(trad(shader))
@@ -180,26 +189,32 @@ def fixMat( mat, Glossfactor, GlossRough, mtlname ):
 		bsdfNode = newNode
 		if 'ShaderNodeBsdfGlass' == shader:
 			newNode.inputs[2].default_value = 1.376
+		bsdfNode .location = ( ox - 600, oy )
+		glossNode = nodes.new(trad( 'ShaderNodeBsdfGlossy'))
+		glossNode .location = ( ox - 600, oy - 100 )
+		fresnelNode = nodes.new(trad( 'ShaderNodeFresnel' ) )
+		fresnelNode .location = ( ox - 600, oy + 100 )
+		fresnelNode.inputs[0].default_value = 1.333
+		glossNode.inputs[0].default_value = [ specularColor[0], specularColor[1], specularColor[2], 1 ]
+# 		bsdfNode.inputs[1].default_value = GlossRough 
+		glossNode.inputs[1].default_value = GlossRough 
+		addNode = nodes.new(trad( 'ShaderNodeMixShader'))
+		addNode .location = ( ox - 300, oy )
+		links.new( mixNode.outputs[0], bsdfNode.inputs[0] )
+		links.new( bsdfNode.outputs[0], addNode.inputs[1] )
+		links.new( glossNode.outputs[0], addNode.inputs[2] )
+		links.new( fresnelNode.outputs[0], addNode.inputs[0] )
+		links.new( addNode.outputs[0], outNode.inputs[0] ) 
 	else:
 		# Create a shader group node; this must already be in the blend file
 		groupNode = nodes.new( trad('ShaderNodeGroup') )
 		groupNode.node_tree = bpy.data.node_groups[getShader( mtlname )]
 		nodes.remove( bsdfNode )
 		bsdfNode = groupNode
+		bsdfNode .location = ( ox - 400, oy )
+		links.new( mixNode.outputs[0], bsdfNode.inputs[0] )
+		links.new( bsdfNode.outputs[0], outNode.inputs[0] )
 	
-	bsdfNode .location = ( ox - 400, oy )
-	# Link it to output
-	links.new( bsdfNode.outputs[0], outNode.inputs[0] )
-	
-# 	glossNode.inputs[0].default_value = [1,1,1,1]
-# 	glossNode.inputs[1].default_value = GlossRough 
-# 	addNode = nodes.new(trad( 'ShaderNodeMixShader'))
-# 	addNode .location = ( ox - 300, oy )
-	links.new( mixNode.outputs[0], bsdfNode.inputs[0] )
-# 	links.new( bsdfNode.outputs[0], addNode.inputs[1] )
-# 	links.new( glossNode.outputs[0], addNode.inputs[2] )
-# 	links.new( addNode.outputs[0], outNode.inputs[0] ) 
-
 # Disregard ambient color for now
 # 	KaMap = getMap( mat, 'Ka', 'Ka.' )
 # 	if KaMap:
@@ -218,18 +233,30 @@ def fixMat( mat, Glossfactor, GlossRough, mtlname ):
 # 		glossNode.distribution = "SHARP"
 # 		glossNode.inputs[0].default_value = [specularColor[0],specularColor[1],specularColor[2],1]
 # 
-# Disregard specular color for now
-# 	KsMap = getMap( mat, 'Ks', 'Ks.' )
-# 	if KsMap:
-# 		texNode = nodes.new(trad( 'ShaderNodeTexImage'))
-# 		texNode.location = ( ox - 1200, oy - 100 )
-# 		texNode.image = KsMap.image
-# 		mulNode = nodes.new(trad( 'ShaderNodeMath'))
-# 		mulNode.operation = 'MULTIPLY'
-# 		mulNode.inputs[1].default_value = 0.1
-# 		mulNode.location = ( ox - 900, oy - 100 )
-# 		links.new( texNode.outputs[0], mulNode.inputs[0] )
-# 		links.new( mulNode.outputs[0], groupNode.inputs[0] )
+# Start trying to use specular map
+	KsMap = getMap( mat, 'Ks', 'Ks.' )
+	if KsMap:
+		texNode = nodes.new(trad( 'ShaderNodeTexImage'))
+		texNode.location = ( ox - 1200, oy + 250 )
+		texNode.image = KsMap.image
+		texNode.label = "Specular Texture"
+		mulNode = nodes.new(trad( 'ShaderNodeMath'))
+		mulNode.operation = 'MULTIPLY'
+		mulNode.inputs[1].default_value = 0.25
+		mulNode.location = ( ox - 900, oy + 200 )
+		links.new( texNode.outputs[0], mulNode.inputs[0] )
+		if "ShaderNode" in shader:
+			fresnelNode.location = ( ox - 900, oy + 300 )
+			specMixNode = nodes.new(trad( 'ShaderNodeMixRGB' ) )
+			specMixNode .location = ( ox - 600, oy + 200 )
+			links.new( fresnelNode.outputs[0], specMixNode.inputs[1] )
+			links.new( mulNode.outputs[0], specMixNode.inputs[0] )
+			specMixNode.inputs[2].default_value = [0,0,0,1]
+			links.new( specMixNode.outputs[0], addNode.inputs[0] )
+			bsdfNode = specMixNode
+		else:
+			if 'Skin Shader' == shader:
+				links.new( mulNode.outputs[0], bsdfNode.inputs[3] )
 
 	if 'ShaderNodeBsdfGlass' != shader:
 		# Add the diffuse map to the group node color input
@@ -248,8 +275,9 @@ def fixMat( mat, Glossfactor, GlossRough, mtlname ):
 				mixNode .location = ( ox - 150, oy + 150 )
 				if( DMap ):
 					texNodeD = nodes.new(trad( 'ShaderNodeTexImage'))
-					texNodeD.location = ( ox - 400, oy + 320)
+					texNodeD.location = ( ox - 400, oy + 520)
 					texNodeD.image = DMap.image
+					texNodeD.label = "Transparency Texture"
 					links.new( texNodeD.outputs[0], mixNode.inputs[0] )
 				elif( opacityStrength < 1 ):
 					mixNode.inputs[0].default_value = opacityStrength
