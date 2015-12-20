@@ -326,3 +326,78 @@ def loadfix( objFile, postLoadProcessor, matLibPath, bGammaFix ):
 	else :
 		print( "no post-load processing" );
 	mcjMatsFromFilename.switchToNamedMaterials();
+	
+# ---------- createIRayMaps ----------
+def createIRayMaps( nodeName, parentName, nodeLabel, matName, diffuse, translucent, specular, bump ):
+	print( "Iray shaders for " + nodeName + ": " + matName )
+	matBlenderName = matName.replace (" ", "_")
+	obj = intelliFindObj( nodeName )
+	mtrslt = 0
+	if obj:
+		mtrslt  = intelliFindMat( obj, nodeName, matBlenderName )
+	else:
+		print( "  Unable to find an object named " + nodeName + "; trying other objects." )
+		if parentName:
+			parentObj = intelliFindObj( parentName )
+			longname = matBlenderName + "_" + nodeLabel
+			longname = longname.replace( " ", "_" )
+			mtrslt = intelliFindMat( parentObj, parentName, longname )
+			if not mtrslt:
+				mtrslt = intelliFindMat( parentObj, parentName, matBlenderName )
+		
+	if mtrslt:
+		mat = mtrslt.material;
+		tree = mat.node_tree
+		nodes = tree.nodes
+		nodes.clear()
+		outNode = nodes.new( 'ShaderNodeOutputMaterial' )
+		ox = outNode .location.x
+		oy = outNode .location.y
+		links = tree.links
+
+		diffNode = nodes.new( 'ShaderNodeTexImage' )
+		diffNode.location = ( ox - 1200, oy + 250 )
+		diffImage = bpy.data.images.load( diffuse )
+		if 'temp' in diffuse:
+			diffImage.pack()
+			print( "  Packed " + diffuse + " in blend file" )
+		diffNode.image = diffImage
+		diffNode.label = "Base Color"
+		
+		# Set up default shader
+		bsdfNode = nodes.new( 'ShaderNodeGroup' )
+		bsdfNode.node_tree = bpy.data.node_groups['Skin Shader']
+		bsdfNode.location = ( ox - 600, oy )
+		links.new( diffNode.outputs[0], bsdfNode.inputs[0] )
+		links.new( bsdfNode.outputs[0], outNode.inputs[0] )
+		
+		if( translucent ):
+			transNode = nodes.new( 'ShaderNodeTexImage' )
+			transNode.location = ( ox - 1200, oy )
+			transNode.image = bpy.data.images.load( translucent )
+			if 'temp' in translucent:
+				transNode.image.pack()
+				print( "  Packed " + translucent + " in blend file" )
+			transNode.label = "Translucent Color"
+			links.new( transNode.outputs[0], bsdfNode.inputs[1] )
+		if( specular ):
+			specNode = nodes.new( 'ShaderNodeTexImage' )
+			specNode.location = ( ox - 1200, oy - 250 )
+			specNode.image = bpy.data.images.load( specular )
+			if 'temp' in specular:
+				specNode.image.pack()
+				print( "  Packed " + specular + " in blend file" )
+			specNode.label = "Specular"
+			links.new( specNode.outputs[0], bsdfNode.inputs[2] )
+		if( bump ):
+			bumpNode = nodes.new( 'ShaderNodeTexImage' )
+			bumpNode.location = ( ox - 1200, oy - 500 )
+			bumpNode.image = bpy.data.images.load( bump )
+			if 'temp' in bump:
+				bumpNode.image.pack()
+				print( "  Packed " + bump + " in blend file" )
+			bumpNode.label = "Bump"
+			links.new( bumpNode.outputs[0], bsdfNode.inputs[3] )
+	else:
+		print ( "  Unable to find a material named " + matName )
+	

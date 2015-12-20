@@ -174,6 +174,8 @@ def fixMat( mat, Glossfactor, GlossRough, mtlname ):
 # 	links.new( mixShaderNode.outputs[0], outNode.inputs[0] )
 
 	shader = getShader( mtlname )
+	
+	print(" Processing " + mtlname + " as " + shader )
 
 	# RGB mix node (for tint)
 	mixNode = nodes.new(trad( 'ShaderNodeMixRGB'))
@@ -206,6 +208,7 @@ def fixMat( mat, Glossfactor, GlossRough, mtlname ):
 		links.new( glossNode.outputs[0], addNode.inputs[2] )
 		links.new( fresnelNode.outputs[0], addNode.inputs[0] )
 		links.new( addNode.outputs[0], outNode.inputs[0] ) 
+		bsdfNode = addNode
 	else:
 		# Create a shader group node; this must already be in the blend file
 		groupNode = nodes.new( trad('ShaderNodeGroup') )
@@ -254,7 +257,6 @@ def fixMat( mat, Glossfactor, GlossRough, mtlname ):
 			links.new( mulNode.outputs[0], specMixNode.inputs[0] )
 			specMixNode.inputs[2].default_value = [0,0,0,1]
 			links.new( specMixNode.outputs[0], addNode.inputs[0] )
-			bsdfNode = specMixNode
 		else:
 			if 'Skin Shader' == shader:
 				links.new( mulNode.outputs[0], bsdfNode.inputs[3] )
@@ -273,7 +275,7 @@ def fixMat( mat, Glossfactor, GlossRough, mtlname ):
 			DMap = getMap( mat, 'D', 'D.' )
 			if( ( opacityStrength < 1 ) or ( DMap ) ):
 				mixNode = nodes.new(trad( 'ShaderNodeMixShader'))
-				mixNode .location = ( ox - 150, oy + 150 )
+				mixNode .location = ( ox - 100, oy + 150 )
 				if( DMap ):
 					texNodeD = nodes.new(trad( 'ShaderNodeTexImage'))
 					texNodeD.location = ( ox - 400, oy + 520)
@@ -283,7 +285,7 @@ def fixMat( mat, Glossfactor, GlossRough, mtlname ):
 				elif( opacityStrength < 1 ):
 					mixNode.inputs[0].default_value = opacityStrength
 				xpaNode = nodes.new(trad( 'ShaderNodeBsdfTransparent'))
-				xpaNode .location = ( ox - 400, oy + 100 )
+				xpaNode .location = ( ox - 350, oy + 100 )
 				outNode .location.x = outNode .location.x + 200
 		#		addNode .location.x = addNode .location.x - 100
 				links.new( xpaNode.outputs[0], mixNode.inputs[1] )
