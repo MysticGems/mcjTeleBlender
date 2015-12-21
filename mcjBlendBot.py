@@ -381,7 +381,7 @@ def createIRayMaps( nodeName, parentName, nodeLabel, matName, diffuse, diffColor
 				transNode.image.pack()
 				print( "  Packed " + translucent + " in blend file" )
 			transNode.label = "Translucent Color"
-			links.new( transNode.outputs[0], bsdfNode.inputs[4] )
+			links.new( transNode.outputs[0], bsdfNode.inputs[6] )
 		bsdfNode.inputs[4].default_value = transWeight
 		bsdfNode.inputs[5].default_value = transColor
 		if( specular ):
