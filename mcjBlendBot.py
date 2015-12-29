@@ -38,20 +38,60 @@ import mcjAddSky
 import mcjMatsFromFilename
 import mcjAddMappersToTexImgs
 
+#----- getShader ------
+
+# Selects a shader based on common DAZ surfaces
+# Defaults to a plain diffuse
+
+surfaces = [
+	[ 'Labia_Minora', 'Skin Shader' ],
+	[ 'Anus', 'Skin Shader' ],
+	[ 'Genitalia' , 'Skin Shader' ],
+	[ 'defaultMat' , 'Skin Shader' ],
+	[ 'Ears' , 'Skin Shader' ],
+	[ 'Face' , 'Skin Shader' ],
+	[ 'Feet' , 'Skin Shader' ],
+	[ 'Arms', 'Skin Shader' ],
+	[ 'Fingernails' , 'Skin Shader' ],
+	[ 'Forearms' , 'Skin Shader' ],
+	[ 'Hands' , 'Skin Shader' ],
+	[ 'Head' , 'Skin Shader' ],
+	[ 'Hips' , 'Skin Shader' ],
+	[ 'Lacrimals' , 'Skin Shader' ],
+	[ 'Legs' , 'Skin Shader' ],
+	[ 'Neck' , 'Skin Shader' ],
+	[ 'Nipples' , 'Skin Shader' ],
+	[ 'Nostrils' , 'Skin Shader' ],
+	[ 'Shoulders' , 'Skin Shader' ],
+	[ 'Toenails' , 'Skin Shader' ],
+	[ 'Torso' , 'Skin Shader' ],
+	[ 'Vagina&Rectum', 'Skin Shader' ]
+]
+
+def getShader( str ):
+	for duet in surfaces:
+		if duet[0] in str:
+			return duet[1]
+	return 'PBR Roughness'
+	
+
 #-------------------------------------------------------------------------------		
 # when daz studio finds a name that already exists in the mtl file
 # it appends the node label (which sometimes differs from the node name
 # default ----> default_mcjA3BodyconR_(2)
 #-------------------------------------------------------------------------------	
 def intelliFindMat( obj, nodeName, matName ):
-	if matName in obj.material_slots:
-		return( obj.material_slots[matName] )
-	longname = matName + "_" + nodeName
-	if longname in obj.material_slots:
-		return( obj.material_slots[longname] )
-	for slt in obj.material_slots:
-		if slt.name.startswith( matName ):
-			return( slt )
+	try:
+		if matName in obj.material_slots:
+			return( obj.material_slots[matName] )
+		longname = matName + "_" + nodeName
+		if longname in obj.material_slots:
+			return( obj.material_slots[longname] )
+		for slt in obj.material_slots:
+			if slt.name.startswith( matName ):
+				return( slt )
+	except AttributeError:
+		print( '  ' + nodeName + ' has no material slots' )
 	return( 0 )
 
 #-------------------------------------------------------------------------------		
@@ -328,7 +368,7 @@ def loadfix( objFile, postLoadProcessor, matLibPath, bGammaFix ):
 	mcjMatsFromFilename.switchToNamedMaterials();
 	
 # ---------- createIRayMaps ----------
-def createIRayMaps( nodeName, parentName, nodeLabel, matName, diffuse, diffColor, translucent, transColor, transWeight, specular, specColor, specWeight, specRefl, specRough, specAnisotropy, specRotation, refractWeight, refractIndex, bump, bumpSize, top, topColor, topWeight, topRefl, topRough, topAnisotropy, topRotation, cutout ):
+def createIRayMaps( shader, nodeName, parentName, nodeLabel, matName, diffuse, diffColor, translucent, transColor, transWeight, specular, specColor, specWeight, specRefl, specRough, specAnisotropy, specRotation, refractWeight, refractIndex, bump, bumpSize, top, topColor, topWeight, topRefl, topRough, topAnisotropy, topRotation, cutout ):
 	print( "Iray shaders for " + nodeName + ": " + matName )
 	matBlenderName = matName.replace (" ", "_")
 	obj = intelliFindObj( nodeName )
@@ -354,89 +394,105 @@ def createIRayMaps( nodeName, parentName, nodeLabel, matName, diffuse, diffColor
 		ox = outNode .location.x
 		oy = outNode .location.y
 		links = tree.links
+		
+# 		sce = bpy.context.scene
+# 		display_device = sce.display_settings.display_device
+# 		sce.display_settings.display_device = 'None'
 
 		# Set up default shader
 		bsdfNode = nodes.new( 'ShaderNodeGroup' )
-		bsdfNode.node_tree = bpy.data.node_groups['PBR Metalicity/Roughness']
+		shader = getShader( 'Fnord' )
+		bsdfNode.node_tree = bpy.data.node_groups[shader]
 		bsdfNode.location = ( ox - 600, oy )
 		links.new( bsdfNode.outputs[0], outNode.inputs[0] )
 		
 		if( diffuse ):
-			diffNode = nodes.new( 'ShaderNodeTexImage' )
-			diffNode.location = ( ox - 1200, oy + 500 )
-			diffImage = bpy.data.images.load( diffuse )
-			if 'temp' in diffuse:
-				diffImage.pack()
-				print( "  Packed " + diffuse + " in blend file" )
-			diffNode.image = diffImage
+			diffNode = addImage( diffuse, ox - 1200, oy + 500, nodes )
 			diffNode.label = "Base Color"
-			links.new( diffNode.outputs[0], bsdfNode.inputs[2] )
-		bsdfNode.inputs[1].default_value = diffColor
+			
+			if( shader == 'PBR Roughness' ):
+				links.new( diffNode.outputs[0], bsdfNode.inputs[2] )
+			else:
+				links.new( diffNode.outputs[0], bsdfNode.inputs[0] )
+		if( shader == 'PBR Roughness' ):
+			bsdfNode.inputs[1].default_value = diffColor
 		
 		if( translucent ):
-			transNode = nodes.new( 'ShaderNodeTexImage' )
-			transNode.location = ( ox - 1200, oy + 250 )
-			transNode.image = bpy.data.images.load( translucent )
-			if 'temp' in translucent:
-				transNode.image.pack()
-				print( "  Packed " + translucent + " in blend file" )
+			transNode = addImage( translucent, ox - 1200, oy +250, nodes )
 			transNode.label = "Translucent Color"
-			links.new( transNode.outputs[0], bsdfNode.inputs[6] )
-		bsdfNode.inputs[4].default_value = transWeight
-		bsdfNode.inputs[5].default_value = transColor
+			if( shader == 'PBR Roughness' ):
+				links.new( transNode.outputs[0], bsdfNode.inputs[6] )
+			else:
+				links.new( transNode.outputs[0], bsdfNode.inputs[1] )
+		if( shader == 'PBR Roughness' ):
+			bsdfNode.inputs[4].default_value = transWeight
+			bsdfNode.inputs[5].default_value = transColor
 		if( specular ):
-			specNode = nodes.new( 'ShaderNodeTexImage' )
-			specNode.location = ( ox - 1200, oy )
-			specNode.image = bpy.data.images.load( specular )
-			if 'temp' in specular:
-				specNode.image.pack()
-				print( "  Packed " + specular + " in blend file" )
+			specNode = addImage( specular, ox - 1200, oy, nodes )
 			specNode.label = "Specular"
-			links.new( specNode.outputs[0], bsdfNode.inputs[9] )
-		bsdfNode.inputs[7].default_value = specWeight
-		bsdfNode.inputs[8].default_value = specColor
-		bsdfNode.inputs[10].default_value = specRough
-		bsdfNode.inputs[11].default_value = specRefl
-		bsdfNode.inputs[12].default_value = specAnisotropy
-		bsdfNode.inputs[13].default_value = specRotation
+			if( shader == 'PBR Roughness' ):
+				links.new( specNode.outputs[0], bsdfNode.inputs[9] )
+			else:
+				links.new( specNode.outputs[0], bsdfNode.inputs[2] )
+		if( shader == 'PBR Roughness' ):
+			bsdfNode.inputs[7].default_value = specWeight
+			bsdfNode.inputs[8].default_value = specColor
+			bsdfNode.inputs[10].default_value = specRough
+			bsdfNode.inputs[11].default_value = specRefl
+			bsdfNode.inputs[12].default_value = specAnisotropy
+			bsdfNode.inputs[13].default_value = specRotation
 		if( bump ):
-			bumpNode = nodes.new( 'ShaderNodeTexImage' )
-			bumpNode.location = ( ox - 1200, oy - 250 )
-			bumpNode.image = bpy.data.images.load( bump )
-			if 'temp' in bump:
-				bumpNode.image.pack()
-				print( "  Packed " + bump + " in blend file" )
+			bumpNode = addImage( bump, ox - 1200, oy - 250, nodes )
 			bumpNode.label = "Bump"
-			links.new( bumpNode.outputs[0], bsdfNode.inputs[15] )
-			links.new( bumpNode.outputs[0], bsdfNode.inputs[30] )
-		bsdfNode.inputs[14].default_value = bumpSize
-		bsdfNode.inputs[17].default_value = refractWeight
-		bsdfNode.inputs[18].default_value = refractIndex
+			if( shader == 'PBR Roughness' ):
+				links.new( bumpNode.outputs[0], bsdfNode.inputs[15] )
+				links.new( bumpNode.outputs[0], bsdfNode.inputs[30] )
+			else:
+				links.new( bumpNode.outputs[0], bsdfNode.inputs[3] )
+		if( shader == 'PBR Roughness' ):
+			bsdfNode.inputs[14].default_value = bumpSize
+			bsdfNode.inputs[17].default_value = refractWeight
+			bsdfNode.inputs[18].default_value = refractIndex
 		if( top ):
-			topNode = nodes.new( 'ShaderNodeTexImage' )
-			topNode.location = ( ox - 1200, oy - 500 )
-			topNode.image = bpy.data.images.load( top )
-			if 'temp' in top:
-				topNode.image.pack()
-				print( "  Packed " + top + " in blend file" )
+			topNode = addImage( top, ox - 1200, oy - 500, nodes )
 			topNode.label = "Top Coat"
-			links.new( topNode.outputs[0], bsdfNode.inputs[22] )
-		bsdfNode.inputs[21].default_value = topWeight
-		bsdfNode.inputs[23].default_value = topColor
-		bsdfNode.inputs[24].default_value = topRough
-		bsdfNode.inputs[25].default_value = topRefl
-		bsdfNode.inputs[26].default_value = topAnisotropy
-		bsdfNode.inputs[27].default_value = topRotation
-		bsdfNode.inputs[29].default_value = bumpSize
+			if ( shader == 'PBR Roughness' ):
+				links.new( topNode.outputs[0], bsdfNode.inputs[22] )
+			elif ( not specular ):
+				links.new( topNode.outputs[0], bsdfNode.inputs[2] )
+		if( shader == 'PBR Roughness' ):
+			bsdfNode.inputs[21].default_value = topWeight
+			bsdfNode.inputs[23].default_value = topColor
+			bsdfNode.inputs[24].default_value = topRough
+			bsdfNode.inputs[25].default_value = topRefl
+			bsdfNode.inputs[26].default_value = topAnisotropy
+			bsdfNode.inputs[27].default_value = topRotation
+			bsdfNode.inputs[29].default_value = bumpSize
 		if( cutout ):
-			cutNode = nodes.new( 'ShaderNodeTexImage' )
-			cutNode.location = ( ox - 1200, oy - 500 )
-			cutNode.image = bpy.data.images.load( cutout )
-			if 'temp' in cutout:
-				cutNode.image.pack()
-				print( "  Packed " + cutout + " in blend file" )
+			cutNode = addImage( cutout, ox - 1200, oy - 750, nodes )
 			cutNode.label = "Cutout"
-			links.new( cutNode.outputs[0], bsdfNode.inputs[31] )
+			if( shader == 'PBR Roughness' and len( bsdfNode.inputs) > 4 ):
+				links.new( cutNode.outputs[0], bsdfNode.inputs[31] )
+			else:
+				links.new( cutNode.outputs[0], bsdfNode.inputs[4] )
+			
+# 		sce.display_settings.display_device = display_device
 	else:
 		print ( "  Unable to find a material named " + matName )
 	
+def addImage( image, nx, ny, nodes ):
+	imgNode = nodes.new( 'ShaderNodeTexImage' )
+	imgNode.location = ( nx, ny )
+	for img in bpy.data.images:
+		if( img.filepath == image ):
+			imgNode.image = img
+			print( "  Found " + image + " and reused it" )
+			return( imgNode )
+		else:
+			print("    Rejected " + img.filepath )
+	imgNode.image = bpy.data.images.load( image )
+	print( "  Added " + image )
+	if '/temp/' in image:
+		imgNode.image.pack()
+		print( "  Packed " + image + " into blend file" )
+	return( imgNode )
