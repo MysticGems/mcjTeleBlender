@@ -326,7 +326,9 @@ def loadfix( objFile, postLoadProcessor, matLibPath, bGammaFix ):
 	
 	#import .obj/.mtl
 	gm = axis_conversion( from_forward='-Z', from_up='Y' ).to_4x4()
-	io_scene_obj.import_obj.load(bpy.ops,bpy.context,objFile,global_matrix=gm)
+	bpy.ops.import_scene.obj( filepath=objFile )
+	# io_scene_obj.import_obj.load(bpy.ops,bpy.context,objFile,global_matrix=gm)
+	
 
 	try:
 		bSmooth = bpy.types.Scene.bSmooth
