@@ -18,12 +18,12 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 bl_info = {
-    "name": "mcjTeleBlender",
-    "version": (1, 0),
-    "author": "mCasualJacques",
-    "blender": (2, 72, 0),
-    "description": "DAZ 3D to Blender conversion",
-    "category": "DAZ 3D"}
+		"name": "mcjTeleBlender",
+		"version": (1, 0),
+		"author": "mCasualJacques",
+		"blender": (2, 72, 0),
+		"description": "DAZ 3D to Blender conversion",
+		"category": "DAZ 3D"}
 
 import bpy
 import sys
@@ -91,7 +91,7 @@ def intelliFindMat( obj, nodeName, matName ):
 			if slt.name.startswith( matName ):
 				return( slt )
 	except AttributeError:
-		print( '  ' + nodeName + ' has no material slots' )
+		print( '	' + nodeName + ' has no material slots' )
 	return( 0 )
 
 #-------------------------------------------------------------------------------		
@@ -135,7 +135,7 @@ def setTiling( nodeName, matName, horizontalTiles, horizontalOffset, verticalTil
 def setBumpMapStrength( nodeName, matName, strength ):
 	obj = intelliFindObj( nodeName )
 	if obj:
-		mtrslt  = intelliFindMat( obj, nodeName, matName )
+		mtrslt	= intelliFindMat( obj, nodeName, matName )
 		if mtrslt:
 			mat = mtrslt.material;
 			tree = mat.node_tree
@@ -370,15 +370,15 @@ def loadfix( objFile, postLoadProcessor, matLibPath, bGammaFix ):
 	mcjMatsFromFilename.switchToNamedMaterials();
 	
 # ---------- createIRayMaps ----------
-def createIRayMaps( shader, nodeName, parentName, nodeLabel, matName, diffuse, diffColor, translucent, transColor, transWeight, specular, specColor, specWeight, specRefl, specRough, specAnisotropy, specRotation, refractWeight, refractIndex, bump, bumpSize, top, topColor, topWeight, topRefl, topRough, topAnisotropy, topRotation, cutout, cutoutWeight ):
+def createIRayMaps( shader, nodeName, parentName, nodeLabel, matName, metallicity, diffuse, diffColor, translucent, transColor, transWeight, specular, specColor, specWeight, specRefl, specRough, specAnisotropy, specRotation, refraction, refractWeight, refractIndex, bump, bumpSize, top, topColor, topWeight, topRefl, topRough, topAnisotropy, topRotation, cutout, cutoutWeight ):
 	print( "Iray shaders for " + nodeName + ": " + matName )
 	matBlenderName = matName.replace (" ", "_")
 	obj = intelliFindObj( nodeName )
 	mtrslt = 0
 	if obj:
-		mtrslt  = intelliFindMat( obj, nodeName, matBlenderName )
+		mtrslt	= intelliFindMat( obj, nodeName, matBlenderName )
 	else:
-		print( "  Unable to find an object named " + nodeName + "; trying other objects." )
+		print( "	Unable to find an object named " + nodeName + "; trying other objects." )
 		if parentName:
 			parentObj = intelliFindObj( parentName )
 			longname = matBlenderName + "_" + nodeLabel
@@ -397,103 +397,73 @@ def createIRayMaps( shader, nodeName, parentName, nodeLabel, matName, diffuse, d
 		oy = outNode .location.y
 		links = tree.links
 		
-# 		sce = bpy.context.scene
-# 		display_device = sce.display_settings.display_device
-# 		sce.display_settings.display_device = 'None'
-
 		# Set up default shader
 		bsdfNode = nodes.new( 'ShaderNodeGroup' )
-		# shader = getShader( 'Fnord' )
 		bsdfNode.node_tree = bpy.data.node_groups[shader]
 		bsdfNode.location = ( ox - 600, oy )
 		links.new( bsdfNode.outputs[0], outNode.inputs[0] )
 		
+		bsdfNode.inputs[0].default_value = metallicity
 		if( diffuse ):
 			diffNode = addImage( diffuse, ox - 1200, oy + 500, nodes )
 			diffNode.label = "Base Color"
 			
-			if( shader == 'PBR Roughness' ):
-				links.new( diffNode.outputs[0], bsdfNode.inputs[2] )
-			elif( shader == 'PBR Metallic' ):
-				links.new( diffNode.outputs[0], bsdfNode.inputs[0] )
-# 			else:
-# 				links.new( diffNode.outputs[0], bsdfNode.inputs[0] )
-		if( shader == 'PBR Roughness' ):
-			bsdfNode.inputs[1].default_value = diffColor
-		elif( shader == 'PBR Metallic' ):
-			bsdfNode.inputs[1].default_value = diffColor
+			links.new( diffNode.outputs[0], bsdfNode.inputs[2] )
+		bsdfNode.inputs[1].default_value = diffColor
 		
 		if( translucent ):
 			transNode = addImage( translucent, ox - 1200, oy +250, nodes )
 			transNode.label = "Translucent Color"
-			if( shader == 'PBR Roughness' ):
-				links.new( transNode.outputs[0], bsdfNode.inputs[6] )
-# 			else:
-# 				links.new( transNode.outputs[0], bsdfNode.inputs[1] )
-		if( shader == 'PBR Roughness' ):
-			bsdfNode.inputs[4].default_value = transWeight
-			bsdfNode.inputs[5].default_value = transColor
+			links.new( transNode.outputs[0], bsdfNode.inputs[6] )
+		bsdfNode.inputs[4].default_value = transWeight
+		bsdfNode.inputs[5].default_value = transColor
 		if( specular ):
 			specNode = addImage( specular, ox - 1200, oy, nodes )
 			specNode.label = "Specular"
-			if( shader == 'PBR Roughness' ):
-				links.new( specNode.outputs[0], bsdfNode.inputs[9] )
-# 			else:
-# 				links.new( specNode.outputs[0], bsdfNode.inputs[2] )
-		if( shader == 'PBR Roughness' ):
-			bsdfNode.inputs[7].default_value = specWeight
-			bsdfNode.inputs[8].default_value = specColor
-			bsdfNode.inputs[10].default_value = specRough
-			bsdfNode.inputs[11].default_value = specRefl
-			bsdfNode.inputs[12].default_value = specAnisotropy
-			bsdfNode.inputs[13].default_value = specRotation
-		elif( shader == 'PBR Metallic' ):
-			bsdfNode.inputs[2].default_value = specColor
-			bsdfNode.inputs[3].default_value = specRough
-			bsdfNode.inputs[4].default_value = specWeight
+			specNode.color_space = 'NONE'
+			links.new( specNode.outputs[0], bsdfNode.inputs[9] )
+		bsdfNode.inputs[7].default_value = specWeight
+		bsdfNode.inputs[8].default_value = specColor
+		bsdfNode.inputs[10].default_value = specRough
+		bsdfNode.inputs[11].default_value = specRefl
+		bsdfNode.inputs[12].default_value = specAnisotropy
+		bsdfNode.inputs[13].default_value = specRotation
 		if( bump ):
 			bumpNode = addImage( bump, ox - 1200, oy - 250, nodes )
 			bumpNode.label = "Bump"
-			if( shader == 'PBR Roughness' ):
-				links.new( bumpNode.outputs[0], bsdfNode.inputs[15] )
-				links.new( bumpNode.outputs[0], bsdfNode.inputs[30] )
-			elif( shader == 'PBR Metallic' ):
-				links.new( bumpNode.outputs[0], bsdfNode.inputs[5] )
-		if( shader == 'PBR Roughness' ):
-			bsdfNode.inputs[14].default_value = bumpSize
+			bumpNode.color_space = 'NONE'
+			links.new( bumpNode.outputs[0], bsdfNode.inputs[15] )
+			links.new( bumpNode.outputs[0], bsdfNode.inputs[30] )
+		bsdfNode.inputs[14].default_value = bumpSize
+		if ( refraction ):
+			refractNode = addImage( refraction, ox - 1500, oy - 375, nodes )
+			refractNode.label = "Refraction"
+			refractNode.color_space = 'NONE'
+			links.new( refractNode.outputs[0], bsdfNode.inputs[17] )
+		else:
 			bsdfNode.inputs[17].default_value = refractWeight
-			bsdfNode.inputs[18].default_value = refractIndex
-		if( shader == 'PBR Metallic' ):
-			bsdfNode.inputs[6].default_value = bumpSize
+		bsdfNode.inputs[18].default_value = refractIndex
 		if( top ):
 			topNode = addImage( top, ox - 1200, oy - 500, nodes )
 			topNode.label = "Top Coat"
-			if ( shader == 'PBR Roughness' ):
-				links.new( topNode.outputs[0], bsdfNode.inputs[22] )
-# 			elif ( not specular ):
-# 				links.new( topNode.outputs[0], bsdfNode.inputs[2] )
-		if( shader == 'PBR Roughness' ):
-			bsdfNode.inputs[21].default_value = topWeight
-			bsdfNode.inputs[23].default_value = topColor
-			bsdfNode.inputs[24].default_value = topRough
-			bsdfNode.inputs[25].default_value = topRefl
-			bsdfNode.inputs[26].default_value = topAnisotropy
-			bsdfNode.inputs[27].default_value = topRotation
-			bsdfNode.inputs[29].default_value = bumpSize
+			topNode.color_space = 'NONE'
+			links.new( topNode.outputs[0], bsdfNode.inputs[22] )
+		bsdfNode.inputs[21].default_value = topWeight
+		bsdfNode.inputs[23].default_value = topColor
+		bsdfNode.inputs[24].default_value = topRough
+		bsdfNode.inputs[25].default_value = topRefl
+		bsdfNode.inputs[26].default_value = topAnisotropy
+		bsdfNode.inputs[27].default_value = topRotation
+		bsdfNode.inputs[29].default_value = bumpSize
 		if( cutout ):
 			cutNode = addImage( cutout, ox - 1200, oy - 750, nodes )
 			cutNode.label = "Cutout"
-			if( shader == 'PBR Roughness' ):
-				links.new( cutNode.outputs[0], bsdfNode.inputs[31] )
-# 			else:
-# 				links.new( cutNode.outputs[0], bsdfNode.inputs[4] )
-			
-# 		sce.display_settings.display_device = display_device
+			cutNode.color_space = 'NONE'
+			links.new( cutNode.outputs[0], bsdfNode.inputs[31] )
 		else:
-			if( shader == 'PBR Roughness' ):
-				bsdfNode.inputs[31].default_value = cutoutWeight
+			bsdfNode.inputs[31].default_value = cutoutWeight
 	else:
-		print ( "  Unable to find a material named " + matName )
+		print ( "	Unable to find a material named " + matName )
 	
 def addImage( image, nx, ny, nodes ):
 	imgNode = nodes.new( 'ShaderNodeTexImage' )
@@ -501,11 +471,11 @@ def addImage( image, nx, ny, nodes ):
 	for img in bpy.data.images:
 		if( img.filepath == image ):
 			imgNode.image = img
-			print( "  Found " + image + " and reused it" )
+			print( "	Found " + image + " and reused it" )
 			return( imgNode )
 	imgNode.image = bpy.data.images.load( image )
-	print( "  Added " + image )
+	print( "	Added " + image )
 	if '/temp/' in image:
 		imgNode.image.pack()
-		print( "  Packed " + image + " into blend file" )
+		print( "	Packed " + image + " into blend file" )
 	return( imgNode )
