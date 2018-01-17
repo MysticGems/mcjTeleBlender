@@ -370,7 +370,7 @@ def loadfix( objFile, postLoadProcessor, matLibPath, bGammaFix ):
 	mcjMatsFromFilename.switchToNamedMaterials();
 	
 # ---------- createIRayMaps ----------
-def createIRayMaps( shader, nodeName, parentName, nodeLabel, matName, metallicity, diffuse, diffColor, translucent, transColor, transWeight, specular, specColor, specWeight, specRefl, specRough, specAnisotropy, specRotation, refraction, refractWeight, refractIndex, bump, bumpSize, top, topColor, topWeight, topRefl, topRough, topAnisotropy, topRotation, cutout, cutoutWeight ):
+def createIRayMaps( shader, nodeName, parentName, nodeLabel, matName, metallicity, diffuse, diffColor, translucent, transColor, transWeight, specular, specColor, specWeight, specRefl, specRough, specAnisotropy, specRotation, refraction, refractWeight, refractIndex, bump, bumpSize, top, topColor, topWeight, topRefl, topRough, topAnisotropy, topRotation, SSScolor, SSSdistance, SSSamount, cutout, cutoutWeight, thinWall ):
 	print( "Iray shaders for " + nodeName + ": " + matName )
 	matBlenderName = matName.replace (" ", "_")
 	obj = intelliFindObj( nodeName )
@@ -455,6 +455,9 @@ def createIRayMaps( shader, nodeName, parentName, nodeLabel, matName, metallicit
 		bsdfNode.inputs[26].default_value = topAnisotropy
 		bsdfNode.inputs[27].default_value = topRotation
 		bsdfNode.inputs[29].default_value = bumpSize
+		bsdfNode.inputs[32].default_value = SSScolor
+		bsdfNode.inputs[33].default_value = SSSdistance
+		bsdfNode.inputs[34].default_value = SSSamount
 		if( cutout ):
 			cutNode = addImage( cutout, ox - 1200, oy - 750, nodes )
 			cutNode.label = "Cutout"
@@ -462,6 +465,7 @@ def createIRayMaps( shader, nodeName, parentName, nodeLabel, matName, metallicit
 			links.new( cutNode.outputs[0], bsdfNode.inputs[31] )
 		else:
 			bsdfNode.inputs[31].default_value = cutoutWeight
+		bsdfNode.inputs[36].default_value = thinWall
 	else:
 		print ( "	Unable to find a material named " + matName )
 	
